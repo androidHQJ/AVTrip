@@ -54,7 +54,7 @@ int main(int argc, char **argv)
     filename = argv[1];
     codec_name = argv[2];
 
-    avcodec_register_all();
+    avcodec_register_all();//注册编解码器相关库
 
     /* find the mpeg1video encoder */
     codec = avcodec_find_encoder_by_name(codec_name);

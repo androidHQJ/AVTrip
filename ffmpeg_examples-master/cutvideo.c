@@ -43,15 +43,19 @@ int cut_video(double from_seconds, double end_seconds, const char* in_filename, 
 
     ofmt = ofmt_ctx->oformat;
 
+    /**流的拷贝*/
+
+    //拿到输入文件有多少路流 nb_streams
     for (i = 0; i < ifmt_ctx->nb_streams; i++) {
         AVStream *in_stream = ifmt_ctx->streams[i];
+        //输入文件的每一路流 都要创建出一个 输出流
         AVStream *out_stream = avformat_new_stream(ofmt_ctx, in_stream->codec->codec);
         if (!out_stream) {
             fprintf(stderr, "Failed allocating output stream\n");
             ret = AVERROR_UNKNOWN;
             goto end;
         }
-
+        //输入流的codec信息拷贝到输出流的codec信息中
         ret = avcodec_copy_context(out_stream->codec, in_stream->codec);
         if (ret < 0) {
             fprintf(stderr, "Failed to copy context from input to output stream codec context\n");
@@ -71,6 +75,7 @@ int cut_video(double from_seconds, double end_seconds, const char* in_filename, 
         }
     }
 
+    //写入多媒体头
     ret = avformat_write_header(ofmt_ctx, NULL);
     if (ret < 0) {
         fprintf(stderr, "Error occurred when opening output file\n");
@@ -80,6 +85,7 @@ int cut_video(double from_seconds, double end_seconds, const char* in_filename, 
     //    int indexs[8] = {0};
 
 
+    //跳到指定截取的时间秒的地方
     //    int64_t start_from = 8*AV_TIME_BASE;
     ret = av_seek_frame(ifmt_ctx, -1, from_seconds*AV_TIME_BASE, AVSEEK_FLAG_ANY);
     if (ret < 0) {
@@ -95,6 +101,7 @@ int cut_video(double from_seconds, double end_seconds, const char* in_filename, 
     while (1) {
         AVStream *in_stream, *out_stream;
 
+        //读取包
         ret = av_read_frame(ifmt_ctx, &pkt);
         if (ret < 0)
             break;
@@ -104,6 +111,7 @@ int cut_video(double from_seconds, double end_seconds, const char* in_filename, 
 
         log_packet(ifmt_ctx, &pkt, "in");
 
+        //包的时间戳与截取的末尾时间比较 如果超过则结束循环
         if (av_q2d(in_stream->time_base) * pkt.pts > end_seconds) {
             av_free_packet(&pkt);
             break;
@@ -117,7 +125,8 @@ int cut_video(double from_seconds, double end_seconds, const char* in_filename, 
             pts_start_from[pkt.stream_index] = pkt.pts;
             printf("pts_start_from: %s\n", av_ts2str(pts_start_from[pkt.stream_index]));
         }
-
+        
+        //时间基做转换，保证同步
         /* copy packet */
         pkt.pts = av_rescale_q_rnd(pkt.pts - pts_start_from[pkt.stream_index], in_stream->time_base, out_stream->time_base, AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX);
         pkt.dts = av_rescale_q_rnd(pkt.dts - dts_start_from[pkt.stream_index], in_stream->time_base, out_stream->time_base, AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX);
@@ -132,6 +141,7 @@ int cut_video(double from_seconds, double end_seconds, const char* in_filename, 
         log_packet(ofmt_ctx, &pkt, "out");
         printf("\n");
 
+        //将每个包写入输出多媒体文件中
         ret = av_interleaved_write_frame(ofmt_ctx, &pkt);
         if (ret < 0) {
             fprintf(stderr, "Error muxing packet\n");
@@ -161,6 +171,7 @@ end:
 }
 
 int main(int argc, char *argv[]){
+    //四个参数：startime, endtime, srcfile, outfile
     if(argc < 5){
         fprintf(stderr, "Usage: \
                 command startime, endtime, srcfile, outfile");
