@@ -114,7 +114,8 @@ int main(int argc, char **argv)
     avcodec_register_all();
 
     /* find the MP2 encoder */
-    codec = avcodec_find_encoder(AV_CODEC_ID_MP2);
+    //codec = avcodec_find_encoder(AV_CODEC_ID_MP2);
+    codec = avcodec_find_encoder_by_name("libfdk_aac");
     if (!codec) {
         fprintf(stderr, "Codec not found\n");
         exit(1);

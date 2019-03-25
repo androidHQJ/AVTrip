@@ -1,0 +1,14 @@
+prefix=android-build-all
+exec_prefix=${prefix}
+libdir=android-build-all/libs/x86
+includedir=android-build-all/includes/x86
+
+Name: libswresample
+Description: FFmpeg audio resampling library
+Version: 3.3.100
+Requires: 
+Requires.private: libavutil >= 56.22.100
+Conflicts:
+Libs: -L${libdir}  -lswresample 
+Libs.private: -lm
+Cflags: -I${includedir}
